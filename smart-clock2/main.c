@@ -5,41 +5,57 @@
 #include "china_lcd.h"
 #include "gfx.h"
 #include "dcf77.h"
+#include "i2cmaster.h"
 
-struct time oldtime;
+#define DS1307ADR 0b11010000
+
+struct time oldtime, rtctime;
 
 char newday[] = "  :  \n  .  .20  \n\0";
 
-char* get_newminute_time_str(char* timestr) {
-	timestr[23] = (oldtime.minute % 10) + '0';
-	timestr[22] = (oldtime.minute / 10) + '0';
-
-	timestr[36] = (time.minute % 10) + '0';
-	timestr[35] = (time.minute / 10) + '0';
-	return timestr;
-}
-
-char* get_newhour_time_str(char* timestr) {
-	timestr[33] = (time.hour % 10) + '0';
-	timestr[32] = (time.hour / 10) + '0';
-	timestr[36] = (time.minute % 10) + '0';
-	timestr[35] = (time.minute / 10) + '0';
-	return timestr;
-}
-
 char* get_newday_time_str(char* timestr) {
-	timestr[0] = (time.hour % 10) + '0';
-	timestr[1] = (time.hour / 10) + '0';
-	timestr[3] = (time.minute % 10) + '0';
-	timestr[4] = (time.minute / 10) + '0';
+	timestr[0] = (rtctime.hour % 10) + '0';
+	timestr[1] = (rtctime.hour / 10) + '0';
+	timestr[3] = (rtctime.minute % 10) + '0';
+	timestr[4] = (rtctime.minute / 10) + '0';
 
-	timestr[6] = (time.day % 10) + '0';
-	timestr[7] = (time.day / 10) + '0';
-	timestr[9] = (time.month % 10) + '0';
-	timestr[10] = (time.month / 10) + '0';
-	timestr[14] = (time.year % 10) + '0';
-	timestr[15] = (time.year / 10) + '0';
+	timestr[6] = (rtctime.day % 10) + '0';
+	timestr[7] = (rtctime.day / 10) + '0';
+	timestr[9] = (rtctime.month % 10) + '0';
+	timestr[10] = (rtctime.month / 10) + '0';
+	timestr[14] = (rtctime.year % 10) + '0';
+	timestr[15] = (rtctime.year / 10) + '0';
 	return timestr;
+}
+
+void ds1307_write(uint8_t adr,uint8_t data) {
+	i2c_start(DS1307ADR+I2C_WRITE);
+	i2c_write(adr);
+	i2c_write(data);
+	i2c_stop();
+}
+
+uint8_t ds1307_read(uint8_t adr) {
+	uint8_t data;
+	
+	i2c_start(DS1307ADR+I2C_WRITE);
+	i2c_write(adr);
+	i2c_rep_start(DS1307ADR+I2C_READ);
+	data=i2c_readNak();
+	i2c_stop();
+	return data;
+}
+
+void ds1307_gettime(void) {
+	rtctime.second = ds1307_read(0);
+	rtctime.minute = ds1307_read(1);
+	rtctime.hour = ds1307_read(2);
+	rtctime.day = ds1307_read(3);
+// 	date = ds1307_read(4);
+	rtctime.month = ds1307_read(5);
+	rtctime.year = ds1307_read(6);
+
+	rtctime.second &= ~128;
 }
 
 int main(void){
@@ -51,6 +67,8 @@ int main(void){
 	// init the 1.8 lcd display
 	init();
 	constructor(_width,_height);
+
+	i2c_init();
 
 	sei();
 

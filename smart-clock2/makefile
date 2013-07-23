@@ -37,7 +37,7 @@
 
 
 # MCU name
-MCU = atmega8
+MCU = atmega328p
 
 
 # Processor frequency.
@@ -57,7 +57,7 @@ TARGET = main
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c china_lcd.c gfx.c dcf77.c timebase.c clock.c
+SRC = $(TARGET).c china_lcd.c gfx.c dcf77.c timebase.c clock.c crc8.c onewire.c ds18x20.c
 
 
 # List Assembler source files here.
@@ -67,7 +67,7 @@ SRC = $(TARGET).c china_lcd.c gfx.c dcf77.c timebase.c clock.c
 #     Even though the DOS/Win* filesystem matches both .s and .S the same,
 #     it will preserve the spelling of the filenames, and gcc itself does
 #     care about how the name is spelled on its command-line.
-ASRC = 
+ASRC = i2cmaster.S
 
 
 # Optimization level, can be [0, 1, 2, 3, s]. 
