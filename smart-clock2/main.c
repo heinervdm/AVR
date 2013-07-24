@@ -99,6 +99,10 @@ void dcf77_sync(void) {
 }
 
 int main(void){
+	DDRD |= (1<<PD4); // my test-pins
+	DDRB |= (1<<PB1);
+	PORTB &= ~(1 << PB1);
+
 	timebase_init();
 
 	// init the 1.8 lcd display
@@ -109,10 +113,9 @@ int main(void){
 
 	sei();
 
-	DDRD |= (1<<PD4); // my test-pins
-
 	setRotation(1);
 	fillScreen(ST7735_BLACK);
+// 	print("Test");
 
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
@@ -129,7 +132,9 @@ int main(void){
 
 		if (lastmin != rtctime.minute && synchronize) {
 			// check temperature only once per minute and only if dcf77 is synchronized
-			curtemp = DS18X20_start_meas(1, NULL);
+			DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
+			while(DS18X20_conversion_in_progress());
+			DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE,&curtemp);
 		}
 
 		if (lastmin != rtctime.minute) {

@@ -11,7 +11,7 @@
 #define DCF77_PIN       PIND
 #define DCF77_PORT      PORTD
 #define DCF77_DDR       DDRD
-#define DCF77           PD2
+#define DCF77           PD1
 
 //#define DCF77_INVERTED        // uncomment if Signal is active Low
 
