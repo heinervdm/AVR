@@ -23,7 +23,7 @@ int8_t lasttemp = 127, curtemp = 0;
 char* get_temp_str(char* str) {
 	if (curtemp < 0) str[0] = '-';
 	else str[0] = ' ';
-	str[1] = (curtemp / 10) + '0';
+	str[1] = (curtemp % 100 / 10) + '0';
 	str[2] = (curtemp % 10) + '0';
 	return str;
 }
@@ -41,7 +41,7 @@ char* get_date_str(char* str) {
 	str[1] = (rtctime.day % 10) + '0';
 	str[3] = (rtctime.month / 10) + '0';
 	str[4] = (rtctime.month % 10) + '0';
-	str[8] = (rtctime.year / 10) + '0';
+	str[8] = (rtctime.year % 100 / 10) + '0';
 	str[9] = (rtctime.year % 10) + '0';
 	return str;
 }
@@ -115,9 +115,6 @@ int main(void){
 
 	sei();
 
-	setRotation(1);
-	fillScreen(ST7735_BLACK);
-
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
 	while (1) {
@@ -140,23 +137,21 @@ int main(void){
 
 		if (lastmin != rtctime.minute) {
 			setTextSize(5);
-			setCursor(10,10);
+			setCursor(5,30);
+			fillScreen(ST7735_BLACK);
+			setRotation(1);
 			print(get_time_str((char *) timestr));
 			lastmin = rtctime.minute;
-		}
 
-		if (lastday != rtctime.day) {
-			setTextSize(2);
-			setCursor(10,100);
+			setTextSize(1);
+			setCursor(10,110);
+			setRotation(1);
 			print(get_date_str((char *) datestr));
-			lastday = rtctime.day;
-		}
 
-		if (lasttemp != curtemp) {
-			setTextSize(2);
-			setCursor(50,100);
+			setTextSize(1);
+			setCursor(110,110);
+			setRotation(1);
 			print(get_temp_str((char *) tempstr));
-			lasttemp = curtemp;
 		}
 
 		if (synchronize) {
