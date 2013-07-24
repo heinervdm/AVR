@@ -30,8 +30,6 @@
   uint8_t PROGMEM BMASK[] = { 1, 2, 4, 8, 10, 20, 40, 80 };
 
 
-struct time newtime;
-
 uint8_t dcf77error = 0;
 uint8_t synchronize = 0;				// successful recieved
 

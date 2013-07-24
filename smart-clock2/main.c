@@ -75,6 +75,15 @@ void ds1307_gettime(void) {
 	rtctime.second &= ~128;
 }
 
+void ds1307_settime(struct time t) {
+	ds1307_write(0,t.second);
+	ds1307_write(1,t.minute);
+	ds1307_write(2,t.hour);
+	ds1307_write(4,t.day);
+	ds1307_write(5,t.month);
+	ds1307_write(6,t.year);
+}
+
 void dcf77_sync(void) {
 	scan_dcf77(); // has to be called at least once every 100ms
 	#if 1
@@ -112,7 +121,10 @@ int main(void){
 
 		if (lastdcfday != rtctime.day) {
 			dcf77_sync();
-			if (synchronize) lastdcfday = rtctime.day;
+			if (synchronize) {
+				lastdcfday = rtctime.day;
+				ds1307_settime(newtime);
+			}
 		}
 
 		if (lastmin != rtctime.minute && synchronize) {
