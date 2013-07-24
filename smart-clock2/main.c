@@ -2,6 +2,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include "china_lcd.h"
 #include "gfx.h"
 #include "dcf77.h"
@@ -67,8 +68,7 @@ void ds1307_gettime(void) {
 	rtctime.second = ds1307_read(0);
 	rtctime.minute = ds1307_read(1);
 	rtctime.hour = ds1307_read(2);
-	rtctime.day = ds1307_read(3);
-// 	date = ds1307_read(4);
+	rtctime.day = ds1307_read(4);
 	rtctime.month = ds1307_read(5);
 	rtctime.year = ds1307_read(6);
 
@@ -105,6 +105,8 @@ int main(void){
 	setRotation(1);
 	fillScreen(ST7735_BLACK);
 
+	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
+
 	while (1) {
 		ds1307_gettime();
 
@@ -138,7 +140,16 @@ int main(void){
 			print(get_temp_str((char *) tempstr));
 			lasttemp = curtemp;
 		}
+
+		if (synchronize) {
+			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+			sleep_mode();
+		}
 	}
 
 	return 0;
+}
+
+ISR(INT0_vect) {
+	/* Interrupt Code */
 }
