@@ -6,25 +6,42 @@
 #include "gfx.h"
 #include "dcf77.h"
 #include "i2cmaster.h"
+#include "ds18x20.h"
 
 #define DS1307ADR 0b11010000
 
 struct time oldtime, rtctime;
 
-char newday[] = "  :  \n  .  .20  \n\0";
+char timestr[] = "  :  ";
+char datestr[] = "  .  .20  ";
+char tempstr[] = "   °C";
 
-char* get_newday_time_str(char* timestr) {
+uint8_t lastmin = 255, lastday = 255, lastdcfday = 255;
+int8_t lasttemp = 127, curtemp = 0;
+
+char* get_temp_str(char* tempstr) {
+	if (curtemp < 0) tempstr[0] = '-';
+	else tempstr[0] = ' ';
+	tempstr[1] = (curtemp % 10) + '0';
+	tempstr[2] = (curtemp / 10) + '0';
+	return tempstr;
+}
+
+char* get_time_str(char* timestr) {
 	timestr[0] = (rtctime.hour % 10) + '0';
 	timestr[1] = (rtctime.hour / 10) + '0';
 	timestr[3] = (rtctime.minute % 10) + '0';
 	timestr[4] = (rtctime.minute / 10) + '0';
+	return timestr;
+}
 
-	timestr[6] = (rtctime.day % 10) + '0';
-	timestr[7] = (rtctime.day / 10) + '0';
-	timestr[9] = (rtctime.month % 10) + '0';
-	timestr[10] = (rtctime.month / 10) + '0';
-	timestr[14] = (rtctime.year % 10) + '0';
-	timestr[15] = (rtctime.year / 10) + '0';
+char* get_date_str(char* datestr) {
+	datestr[0] = (rtctime.day % 10) + '0';
+	datestr[1] = (rtctime.day / 10) + '0';
+	datestr[3] = (rtctime.month % 10) + '0';
+	datestr[4] = (rtctime.month / 10) + '0';
+	datestr[8] = (rtctime.year % 10) + '0';
+	datestr[9] = (rtctime.year / 10) + '0';
 	return timestr;
 }
 
@@ -58,11 +75,22 @@ void ds1307_gettime(void) {
 	rtctime.second &= ~128;
 }
 
+void dcf77_sync(void) {
+	scan_dcf77(); // has to be called at least once every 100ms
+	#if 1
+	if (DCF77_PIN & 1 << DCF77)
+		PORTD &= ~(1 << PD4); // PD4 shows dcf77-pulse
+	else
+		PORTD |= 1 << PD4;
+	#endif
+	if (timeflags & 1 << ONE_SECOND) {
+		timeflags = 0;
+		clock();
+	}
+}
+
 int main(void){
-	uint8_t flipper;
-	uint8_t lastwait = 0;
 	timebase_init();
-	flipper = 0;
 
 	// init the 1.8 lcd display
 	init();
@@ -74,91 +102,42 @@ int main(void){
 
 	DDRD |= (1<<PD4); // my test-pins
 
+	setRotation(1);
 	fillScreen(ST7735_BLACK);
 
-	while(1){
-		scan_dcf77(); // has to be called at least once every 100ms
-		setRotation(0);
-		setCursor(0,0);
- 		setTextWrap(1);
-#if 1
-		if (DCF77_PIN & 1 << DCF77)
-			PORTD &= ~(1 << PD4); // PD0 shows dcf77-pulse
-		else
-			PORTD |= 1 << PD4;
-#endif
-		if (timeflags & 1 << ONE_SECOND) {
-			timeflags = 0;
-			clock();
-			if (!synchronize) {
-				if (lastwait == 0) fillScreen(ST7735_BLACK);
-				switch (flipper++) {
-					case 0:
-						print("Wait for Sync -\n");
-						break;
-					case 1:
-						print("Wait for Sync \\\n");
-						break;
-					case 2:
-						print("Wait for Sync |\n");
-						break;
-					case 3:
-						print("Wait for Sync /\n");
-						break;
-				}
-				if(flipper == 4) flipper=0;
-				lastwait = 1;
-			}
-			else {
-				if (lastwait == 1) fillScreen(ST7735_BLACK);
-				get_newday_time_str((char *) newday);
-				print(newday);
-// 				if (time.day != oldtime.day) {
-// 					get_newday_time_str((char *) newday);
-// 					uputs((uint8_t *) newday);
-// 					oldtime=time;
-// 				} else if (time.hour != oldtime.hour) {
-// 					get_newhour_time_str((char *) newhour);
-// 					uputs((uint8_t *) newhour);
-// 					oldtime=time;
-// 				} else if (time.minute != oldtime.minute) {
-// 					get_newminute_time_str((char *) newminute);
-// 					uputs((uint8_t *) newminute);
-// 					oldtime=time;
-// 				}
-				lastwait = 0;
-			}
-		}
-		
+	while (1) {
+		ds1307_gettime();
 
-// 		// COLORS AND 'T'
-// 		fillScreen(Color565(255,0,0));
-// 		fillRect(10,10,128-20,10,Color565(0,0,0));
-// 		fillRect(64-5,10,10,140, Color565(0,0,0));
-// 		myDelay(300);
-// 
-// 		fillScreen(Color565(0,255,0));
-// 		fillRect(10,10,128-20,10,Color565(0,0,0));
-// 		fillRect(64-5,10,10,140, Color565(0,0,0));
-// 		myDelay(300);
-// 
-// 		fillScreen(Color565(0,0,255));
-// 		fillRect(10,10,128-20,10,Color565(0,0,0));
-// 		fillRect(64-5,10,10,140, Color565(0,0,0));
-// 		myDelay(300);
-// 
-// 		// TEXT
-// 		fillScreen(ST7735_BLACK);
-// 		setCursor(0,0);
-// 		setTextWrap(1);
-// 		print("Hallo dies ist ein Test von Tobi!");
-// 		myDelay(5000);
-// 		setTextSize(2);
-// 		setRotation(1);
-// 		fillScreen(ST7735_BLACK);
-// 		setCursor(0,0);
-// 		print("Hallo dies ist ein Test von Tobi!");
-// 		myDelay(5000);
+		if (lastdcfday != rtctime.day) {
+			dcf77_sync();
+			if (synchronize) lastdcfday = rtctime.day;
+		}
+
+		if (lastmin != rtctime.minute && synchronize) {
+			// check temperature only once per minute and only if dcf77 is synchronized
+			curtemp = DS18X20_start_meas(1, NULL);
+		}
+
+		if (lastmin != rtctime.minute) {
+			setTextSize(3);
+			setCursor(50,0);
+			print(get_time_str((char *) timestr));
+			lastmin = rtctime.minute;
+		}
+
+		if (lastday != rtctime.day) {
+			setTextSize(1);
+			setCursor(0,100);
+			print(get_date_str((char *) datestr));
+			lastday = rtctime.day;
+		}
+
+		if (lasttemp != curtemp) {
+			setTextSize(1);
+			setCursor(50,100);
+			print(get_temp_str((char *) tempstr));
+			lasttemp = curtemp;
+		}
 	}
 
 	return 0;
