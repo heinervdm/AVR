@@ -20,30 +20,30 @@ char tempstr[] = "   °C";
 uint8_t lastmin = 255, lastday = 255, lastdcfday = 255;
 int8_t lasttemp = 127, curtemp = 0;
 
-char* get_temp_str(char* tempstr) {
-	if (curtemp < 0) tempstr[0] = '-';
-	else tempstr[0] = ' ';
-	tempstr[1] = (curtemp % 10) + '0';
-	tempstr[2] = (curtemp / 10) + '0';
-	return tempstr;
+char* get_temp_str(char* str) {
+	if (curtemp < 0) str[0] = '-';
+	else str[0] = ' ';
+	str[1] = (curtemp / 10) + '0';
+	str[2] = (curtemp % 10) + '0';
+	return str;
 }
 
-char* get_time_str(char* timestr) {
-	timestr[0] = (rtctime.hour % 10) + '0';
-	timestr[1] = (rtctime.hour / 10) + '0';
-	timestr[3] = (rtctime.minute % 10) + '0';
-	timestr[4] = (rtctime.minute / 10) + '0';
-	return timestr;
+char* get_time_str(char* str) {
+	str[0] = (rtctime.hour / 10) + '0';
+	str[1] = (rtctime.hour % 10) + '0';
+	str[3] = (rtctime.minute / 10) + '0';
+	str[4] = (rtctime.minute % 10) + '0';
+	return str;
 }
 
-char* get_date_str(char* datestr) {
-	datestr[0] = (rtctime.day % 10) + '0';
-	datestr[1] = (rtctime.day / 10) + '0';
-	datestr[3] = (rtctime.month % 10) + '0';
-	datestr[4] = (rtctime.month / 10) + '0';
-	datestr[8] = (rtctime.year % 10) + '0';
-	datestr[9] = (rtctime.year / 10) + '0';
-	return timestr;
+char* get_date_str(char* str) {
+	str[0] = (rtctime.day / 10) + '0';
+	str[1] = (rtctime.day % 10) + '0';
+	str[3] = (rtctime.month / 10) + '0';
+	str[4] = (rtctime.month % 10) + '0';
+	str[8] = (rtctime.year / 10) + '0';
+	str[9] = (rtctime.year % 10) + '0';
+	return str;
 }
 
 void ds1307_write(uint8_t adr,uint8_t data) {
@@ -68,6 +68,7 @@ void ds1307_gettime(void) {
 	rtctime.second = ds1307_read(0);
 	rtctime.minute = ds1307_read(1);
 	rtctime.hour = ds1307_read(2);
+	rtctime.wday = ds1307_read(3);
 	rtctime.day = ds1307_read(4);
 	rtctime.month = ds1307_read(5);
 	rtctime.year = ds1307_read(6);
@@ -79,6 +80,7 @@ void ds1307_settime(struct time t) {
 	ds1307_write(0,t.second);
 	ds1307_write(1,t.minute);
 	ds1307_write(2,t.hour);
+	ds1307_write(3,t.wday);
 	ds1307_write(4,t.day);
 	ds1307_write(5,t.month);
 	ds1307_write(6,t.year);
@@ -115,7 +117,6 @@ int main(void){
 
 	setRotation(1);
 	fillScreen(ST7735_BLACK);
-// 	print("Test");
 
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
@@ -138,21 +139,21 @@ int main(void){
 		}
 
 		if (lastmin != rtctime.minute) {
-			setTextSize(3);
-			setCursor(50,0);
+			setTextSize(5);
+			setCursor(10,10);
 			print(get_time_str((char *) timestr));
 			lastmin = rtctime.minute;
 		}
 
 		if (lastday != rtctime.day) {
-			setTextSize(1);
-			setCursor(0,100);
+			setTextSize(2);
+			setCursor(10,100);
 			print(get_date_str((char *) datestr));
 			lastday = rtctime.day;
 		}
 
 		if (lasttemp != curtemp) {
-			setTextSize(1);
+			setTextSize(2);
 			setCursor(50,100);
 			print(get_temp_str((char *) tempstr));
 			lasttemp = curtemp;
