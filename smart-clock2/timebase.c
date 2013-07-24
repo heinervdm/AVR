@@ -33,8 +33,8 @@ uint8_t ct_64Hz; // 64 Hz counter (4sec)
 void
 timebase_init(void)
 {
-  TCCR0 = (1 << CS02) | (1 << CS00); // prescale = 1024
-  TIMSK = 1 << TOIE0; // interrupt enable
+  TCCR0B = (1 << CS02) | (1 << CS00); // prescale = 1024
+  TIMSK0 = 1 << TOIE0; // interrupt enable
 }
 
 SIGNAL (TIMER0_OVF_vect)
