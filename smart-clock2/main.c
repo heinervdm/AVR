@@ -71,11 +71,11 @@ void ds1307_gettime(void) {
 	rtctime.minute = (tmp & 0x0F) + ((tmp & 0b01110000) >> 4) * 10;
 	tmp = ds1307_read(2);
 	rtctime.hour = (tmp & 0x0F) + ((tmp & 0b00110000) >> 4) * 10;
-	rtctime.wday = ds1307_read(3) & 0b00000111;
+	rtctime.wday = ds1307_read(3);
 	tmp = ds1307_read(4);
-	rtctime.day = (tmp & 0x0F) + ((tmp & 0b00110000) >> 4) * 10;
+	rtctime.day = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
 	tmp = ds1307_read(5);
-	rtctime.month = (tmp & 0x0F) + ((tmp & 0b00010000) >> 4) * 10;
+	rtctime.month = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
 	tmp = ds1307_read(6);
 	rtctime.year = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
 
@@ -120,7 +120,10 @@ int main(void){
 	i2c_init();
 
 	sei();
-
+	uint8_t tmp = ds1307_read(2);
+	if (tmp & (1 << 6)) {
+		ds1307_write(2, tmp & ~(1 << 6));
+	}
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
 	while (1) {
