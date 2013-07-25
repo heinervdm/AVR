@@ -65,13 +65,19 @@ uint8_t ds1307_read(uint8_t adr) {
 }
 
 void ds1307_gettime(void) {
-	rtctime.second = ds1307_read(0);
-	rtctime.minute = ds1307_read(1);
-	rtctime.hour = ds1307_read(2);
-	rtctime.wday = ds1307_read(3);
-	rtctime.day = ds1307_read(4);
-	rtctime.month = ds1307_read(5);
-	rtctime.year = ds1307_read(6);
+	uint8_t tmp = ds1307_read(0);
+	rtctime.second = (tmp & 0x0F) + ((tmp & 0b01110000) >> 4) * 10;
+	tmp = ds1307_read(1);
+	rtctime.minute = (tmp & 0x0F) + ((tmp & 0b01110000) >> 4) * 10;
+	tmp = ds1307_read(2);
+	rtctime.hour = (tmp & 0x0F) + ((tmp & 0b00110000) >> 4) * 10;
+	rtctime.wday = ds1307_read(3) & 0b00000111;
+	tmp = ds1307_read(4);
+	rtctime.day = (tmp & 0x0F) + ((tmp & 0b00110000) >> 4) * 10;
+	tmp = ds1307_read(5);
+	rtctime.month = (tmp & 0x0F) + ((tmp & 0b00010000) >> 4) * 10;
+	tmp = ds1307_read(6);
+	rtctime.year = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
 
 	rtctime.second &= ~128;
 }
