@@ -57,6 +57,12 @@ void dcf77_sync(void) {
 	}
 }
 
+void ds18x20_get_temperature(void) {
+	DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
+	while(DS18X20_conversion_in_progress());
+	DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE, &curtemp);
+}
+
 int main(void){
 	DDRD |= (1<<PD4); // my test-pins
 	DDRB |= (1<<PB1);
@@ -78,6 +84,8 @@ int main(void){
 	}
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
+	ds18x20_get_temperature();
+
 	while (1) {
 		rtctime = ds1307_gettime();
 
@@ -91,15 +99,13 @@ int main(void){
 
 		if (lastmin != rtctime.minute && synchronize) {
 			// check temperature only once per minute and only if dcf77 is synchronized
-			DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
-			while(DS18X20_conversion_in_progress());
-			DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE,&curtemp);
+			ds18x20_get_temperature();
 		}
 
 		if (lastmin != rtctime.minute) {
+			fillScreen(ST7735_BLACK);
 			setTextSize(5);
 			setCursor(5,30);
-			fillScreen(ST7735_BLACK);
 			setRotation(1);
 			print(get_time_str((char *) timestr));
 			lastmin = rtctime.minute;
