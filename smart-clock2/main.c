@@ -66,6 +66,9 @@ int main(void){
 	DDRB |= (1<<PB1);
 	PORTB &= ~(1 << PB1);
 
+	// enable INT0
+	EICRA |= (1<<ISC01) ^ (1<<ISC00); // interrupt on rising edge of INT0
+
 	timebase_init();
 
 	// init the 1.8 lcd display
@@ -76,9 +79,9 @@ int main(void){
 
 	sei();
 
-	ds1307_sqw(DS1307_SQW_1HZ);
-
 	ds18x20_get_temperature(&curtemp);
+
+	ds1307_sqw(DS1307_SQW_1HZ);
 
 	while (1) {
 		rtctime = ds1307_gettime();
