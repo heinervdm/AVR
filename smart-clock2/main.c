@@ -11,7 +11,7 @@
 
 char timestr[] = "  :  ";
 char datestr[] = "  .  .20  ";
-char tempstr[] = "   °C";
+char tempstr[] = "    C";
 
 uint8_t lastmin = 255, lastday = 255, lastdcfday = 255;
 int8_t lasttemp = 127;
@@ -79,8 +79,8 @@ int main(void){
 
 	sei();
 
+	tempstr[3] = 246; // ° is not at right position in glcdfont.c
 	ds18x20_get_temperature(&curtemp);
-
 	ds1307_sqw(DS1307_SQW_1HZ);
 
 	while (1) {
