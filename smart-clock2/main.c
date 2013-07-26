@@ -72,15 +72,11 @@ int main(void){
 	init();
 	constructor(_width,_height);
 
-	i2c_init();
+	ds1307_init();
 
 	sei();
 
-	uint8_t tmp = ds1307_read(2);
-	if (tmp & (1 << 6)) {
-		ds1307_write(2, tmp & ~(1 << 6));
-	}
-	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
+	ds1307_sqw(DS1307_SQW_1HZ);
 
 	ds18x20_get_temperature(&curtemp);
 

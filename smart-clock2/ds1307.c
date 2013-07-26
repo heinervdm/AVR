@@ -1,6 +1,19 @@
 #include "ds1307.h"
 #include "i2cmaster.h"
 
+void ds1307_init(void) {
+	i2c_init();
+
+	uint8_t tmp = ds1307_read(2);
+	if (tmp & (1 << 6)) {
+		ds1307_write(2, tmp & ~(1 << 6));
+	}
+}
+
+void ds1307_sqw(enum DS1307SQW mask) {
+	ds1307_write(7, mask);
+}
+
 void ds1307_write(uint8_t adr,uint8_t data) {
 	i2c_start(DS1307ADR+I2C_WRITE);
 	i2c_write(adr);
