@@ -10,6 +10,7 @@
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
+#include <stdint.h>
 
 struct time {
   uint8_t second;

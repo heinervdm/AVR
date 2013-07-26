@@ -17,7 +17,7 @@
 extern uint8_t dcf77error;
 extern uint8_t synchronize;
 
-struct time newtime;
+extern struct time newtime;
 
 void scan_dcf77( void );
 

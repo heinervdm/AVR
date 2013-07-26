@@ -57,7 +57,7 @@ TARGET = main
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c china_lcd.c gfx.c dcf77.c timebase.c clock.c crc8.c onewire.c ds18x20.c twimaster.c
+SRC = $(TARGET).c china_lcd.c gfx.c dcf77.c timebase.c clock.c crc8.c onewire.c ds18x20.c twimaster.c ds1307.c
 
 
 # List Assembler source files here.
