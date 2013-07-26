@@ -8,6 +8,10 @@ void ds1307_init(void) {
 	if (tmp & (1 << 6)) {
 		ds1307_write(2, tmp & ~(1 << 6));
 	}
+	tmp = ds1307_read(0);
+	if (tmp & (1 << 7)) {
+		ds1307_write(0, tmp & ~(1 << 7));
+	}
 }
 
 void ds1307_sqw(enum DS1307SQW mask) {
