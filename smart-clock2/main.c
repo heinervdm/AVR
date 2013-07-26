@@ -79,8 +79,16 @@ int main(void){
 
 	sei();
 
-	tempstr[3] = 246; // ° is not at right position in glcdfont.c
-	ds18x20_get_temperature(&curtemp);
+// 	struct time settime;
+// 	settime.minute = 39;
+// 	settime.hour = 20;
+// 	settime.day = 26;
+// 	settime.month = 7;
+// 	settime.year = 13;
+// 	ds1307_settime(settime);
+
+// 	tempstr[3] = 246; // ° is not at right position in glcdfont.c
+// 	ds18x20_get_temperature(&curtemp);
 	ds1307_sqw(DS1307_SQW_1HZ);
 
 	while (1) {
@@ -96,11 +104,17 @@ int main(void){
 
 		if (lastmin != rtctime.minute && synchronize) {
 			// check temperature only once per minute and only if dcf77 is synchronized
-			ds18x20_get_temperature(&curtemp);
+// 			ds18x20_get_temperature(&curtemp);
 		}
 
 		if (lastmin != rtctime.minute) {
 			fillScreen(ST7735_BLACK);
+			setTextSize(1);
+			setCursor(0,0);
+			setRotation(1);
+			if (synchronize) print("O");
+			else print("0");
+
 			setTextSize(5);
 			setCursor(5,30);
 			setRotation(1);
