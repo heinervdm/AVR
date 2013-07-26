@@ -7,40 +7,36 @@
 #include "dcf77.h"
 #include "ds18x20.h"
 #include "ds1307.h"
-
-struct time rtctime;
+#include "i2cmaster.h"
 
 char timestr[] = "  :  ";
 char datestr[] = "  .  .20  ";
 char tempstr[] = "   °C";
 
 uint8_t lastmin = 255, lastday = 255, lastdcfday = 255;
-int8_t lasttemp = 127, curtemp = 0;
+int8_t lasttemp = 127;
 
-char* get_temp_str(char* str) {
-	if (curtemp < 0) str[0] = '-';
-	else str[0] = ' ';
-	str[1] = (curtemp % 100 / 10) + '0';
-	str[2] = (curtemp % 10) + '0';
-	return str;
+void get_temp_str(int16_t curtemp) {
+	if (curtemp < 0) tempstr[0] = '-';
+	else tempstr[0] = ' ';
+	tempstr[1] = (curtemp % 100 / 10) + '0';
+	tempstr[2] = (curtemp % 10) + '0';
 }
 
-char* get_time_str(char* str) {
-	str[0] = (rtctime.hour / 10) + '0';
-	str[1] = (rtctime.hour % 10) + '0';
-	str[3] = (rtctime.minute / 10) + '0';
-	str[4] = (rtctime.minute % 10) + '0';
-	return str;
+void get_time_str(struct time rtctime) {
+	timestr[0] = (rtctime.hour / 10) + '0';
+	timestr[1] = (rtctime.hour % 10) + '0';
+	timestr[3] = (rtctime.minute / 10) + '0';
+	timestr[4] = (rtctime.minute % 10) + '0';
 }
 
-char* get_date_str(char* str) {
-	str[0] = (rtctime.day / 10) + '0';
-	str[1] = (rtctime.day % 10) + '0';
-	str[3] = (rtctime.month / 10) + '0';
-	str[4] = (rtctime.month % 10) + '0';
-	str[8] = (rtctime.year % 100 / 10) + '0';
-	str[9] = (rtctime.year % 10) + '0';
-	return str;
+void get_date_str(struct time rtctime) {
+	datestr[0] = (rtctime.day / 10) + '0';
+	datestr[1] = (rtctime.day % 10) + '0';
+	datestr[3] = (rtctime.month / 10) + '0';
+	datestr[4] = (rtctime.month % 10) + '0';
+	datestr[8] = (rtctime.year % 100 / 10) + '0';
+	datestr[9] = (rtctime.year % 10) + '0';
 }
 
 void dcf77_sync(void) {
@@ -57,13 +53,15 @@ void dcf77_sync(void) {
 	}
 }
 
-void ds18x20_get_temperature(void) {
+void ds18x20_get_temperature(int16_t *curtemp) {
 	DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
 	while(DS18X20_conversion_in_progress());
-	DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE, &curtemp);
+	DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE, curtemp);
 }
 
 int main(void){
+	struct time rtctime;
+	int16_t curtemp = 0;
 	DDRD |= (1<<PD4); // my test-pins
 	DDRB |= (1<<PB1);
 	PORTB &= ~(1 << PB1);
@@ -84,7 +82,7 @@ int main(void){
 	}
 	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
 
-	ds18x20_get_temperature();
+	ds18x20_get_temperature(&curtemp);
 
 	while (1) {
 		rtctime = ds1307_gettime();
@@ -99,7 +97,7 @@ int main(void){
 
 		if (lastmin != rtctime.minute && synchronize) {
 			// check temperature only once per minute and only if dcf77 is synchronized
-			ds18x20_get_temperature();
+			ds18x20_get_temperature(&curtemp);
 		}
 
 		if (lastmin != rtctime.minute) {
@@ -107,18 +105,21 @@ int main(void){
 			setTextSize(5);
 			setCursor(5,30);
 			setRotation(1);
-			print(get_time_str((char *) timestr));
+			get_time_str(rtctime);
+			print(timestr);
 			lastmin = rtctime.minute;
 
 			setTextSize(1);
 			setCursor(10,110);
 			setRotation(1);
-			print(get_date_str((char *) datestr));
+			get_date_str(rtctime);
+			print(datestr);
 
 			setTextSize(1);
 			setCursor(110,110);
 			setRotation(1);
-			print(get_temp_str((char *) tempstr));
+			get_temp_str(curtemp);
+			print(tempstr);
 		}
 
 		if (synchronize) {
