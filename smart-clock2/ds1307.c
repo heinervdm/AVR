@@ -57,11 +57,11 @@ struct time ds1307_gettime(void) {
 }
 
 void ds1307_settime(struct time t) {
-	ds1307_write(0,t.second);
-	ds1307_write(1,t.minute);
-	ds1307_write(2,t.hour);
-	ds1307_write(3,t.wday);
-	ds1307_write(4,t.day);
-	ds1307_write(5,t.month);
-	ds1307_write(6,t.year);
+	ds1307_write(0, ((t.second / 10) << 4) | (t.second % 10));
+	ds1307_write(1, ((t.minute / 10) << 4) | (t.minute % 10));
+	ds1307_write(2, ((t.hour / 10) << 4) | (t.hour % 10));
+	ds1307_write(3, t.wday);
+	ds1307_write(4, ((t.day / 10) << 4) | (t.day % 10));
+	ds1307_write(5, ((t.month / 10) << 4) | (t.month % 10));
+	ds1307_write(6, ((t.year / 10) << 4) | (t.year % 10)); 
 }
