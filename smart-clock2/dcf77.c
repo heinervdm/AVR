@@ -11,13 +11,11 @@
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 
-
 #include "clock.h"
 #include "timebase.h"
 #include "dcf77.h"
 
-
-  uint8_t PROGMEM BITNO[] = {
+uint8_t PROGMEM BITNO[] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,		// minute
     0xFF,						// parity
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15,			// hour
@@ -27,12 +25,12 @@
     0x40, 0x41, 0x42, 0x43, 0x44,			// month
     0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,	// year
     0xFF };						// parity
-  uint8_t PROGMEM BMASK[] = { 1, 2, 4, 8, 10, 20, 40, 80 };
-
+uint8_t PROGMEM BMASK[] = { 1, 2, 4, 8, 10, 20, 40, 80 };
 
 uint8_t dcf77error = 0;
 uint8_t synchronize = 0;				// successful recieved
 
+struct time newtime;
 
 void decode_dcf77( uint8_t pulse )
 {
@@ -58,7 +56,6 @@ void decode_dcf77( uint8_t pulse )
   if( pulse )
     *d += __LPM_classic__(&BMASK[i]);			// set bit
 }
-
 
 void scan_dcf77( void )
 {

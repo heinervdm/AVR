@@ -1,3 +1,6 @@
+#ifndef CHINA_LCD_H
+#define CHINA_LCD_H
+
 #include <avr/pgmspace.h>
 
 /******************** PORT AND PINS ************************************/
@@ -118,3 +121,5 @@ uint16_t Color565(uint8_t r, uint8_t g, uint8_t b);
 #define ST7735_MAGENTA 0xF81F
 #define ST7735_YELLOW  0xFFE0
 #define ST7735_WHITE   0xFFFF
+
+#endif

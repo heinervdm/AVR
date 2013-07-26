@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
@@ -6,62 +5,38 @@
 #include "china_lcd.h"
 #include "gfx.h"
 #include "dcf77.h"
-#include "i2cmaster.h"
 #include "ds18x20.h"
-
-#define DS1307ADR 0b11010000
-
-struct time oldtime, rtctime;
+#include "ds1307.h"
+#include "i2cmaster.h"
 
 char timestr[] = "  :  ";
 char datestr[] = "  .  .20  ";
-char tempstr[] = "   °C";
+char tempstr[] = "    C";
 
 uint8_t lastmin = 255, lastday = 255, lastdcfday = 255;
-int8_t lasttemp = 127, curtemp = 0;
+int8_t lasttemp = 127;
 
-char* get_temp_str(char* str) {
-	if (curtemp < 0) str[0] = '-';
-	else str[0] = ' ';
-	str[1] = (curtemp % 100 / 10) + '0';
-	str[2] = (curtemp % 10) + '0';
-	return str;
+void get_temp_str(int16_t curtemp) {
+	if (curtemp < 0) tempstr[0] = '-';
+	else tempstr[0] = ' ';
+	tempstr[1] = (curtemp % 100 / 10) + '0';
+	tempstr[2] = (curtemp % 10) + '0';
 }
 
-char* get_time_str(char* str) {
-	str[0] = (rtctime.hour / 10) + '0';
-	str[1] = (rtctime.hour % 10) + '0';
-	str[3] = (rtctime.minute / 10) + '0';
-	str[4] = (rtctime.minute % 10) + '0';
-	return str;
+void get_time_str(struct time rtctime) {
+	timestr[0] = (rtctime.hour / 10) + '0';
+	timestr[1] = (rtctime.hour % 10) + '0';
+	timestr[3] = (rtctime.minute / 10) + '0';
+	timestr[4] = (rtctime.minute % 10) + '0';
 }
 
-char* get_date_str(char* str) {
-	str[0] = (rtctime.day / 10) + '0';
-	str[1] = (rtctime.day % 10) + '0';
-	str[3] = (rtctime.month / 10) + '0';
-	str[4] = (rtctime.month % 10) + '0';
-	str[8] = (rtctime.year % 100 / 10) + '0';
-	str[9] = (rtctime.year % 10) + '0';
-	return str;
-}
-
-void ds1307_write(uint8_t adr,uint8_t data) {
-	i2c_start(DS1307ADR+I2C_WRITE);
-	i2c_write(adr);
-	i2c_write(data);
-	i2c_stop();
-}
-
-uint8_t ds1307_read(uint8_t adr) {
-	uint8_t data;
-	
-	i2c_start(DS1307ADR+I2C_WRITE);
-	i2c_write(adr);
-	i2c_rep_start(DS1307ADR+I2C_READ);
-	data=i2c_readNak();
-	i2c_stop();
-	return data;
+void get_date_str(struct time rtctime) {
+	datestr[0] = (rtctime.day / 10) + '0';
+	datestr[1] = (rtctime.day % 10) + '0';
+	datestr[3] = (rtctime.month / 10) + '0';
+	datestr[4] = (rtctime.month % 10) + '0';
+	datestr[8] = (rtctime.year % 100 / 10) + '0';
+	datestr[9] = (rtctime.year % 10) + '0';
 }
 
 void ds1307_gettime(void) {
@@ -106,10 +81,21 @@ void dcf77_sync(void) {
 	}
 }
 
+void ds18x20_get_temperature(int16_t *curtemp) {
+	DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
+	while(DS18X20_conversion_in_progress());
+	DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE, curtemp);
+}
+
 int main(void){
+	struct time rtctime;
+	int16_t curtemp = 0;
 	DDRD |= (1<<PD4); // my test-pins
 	DDRB |= (1<<PB1);
 	PORTB &= ~(1 << PB1);
+
+	// enable INT0
+	EICRA |= (1<<ISC01) ^ (1<<ISC00); // interrupt on rising edge of INT0
 
 	timebase_init();
 
@@ -117,17 +103,16 @@ int main(void){
 	init();
 	constructor(_width,_height);
 
-	i2c_init();
+	ds1307_init();
 
 	sei();
-	uint8_t tmp = ds1307_read(2);
-	if (tmp & (1 << 6)) {
-		ds1307_write(2, tmp & ~(1 << 6));
-	}
-	ds1307_write(7,(1 << 4)); // enable 1Hz of DS1307
+
+	tempstr[3] = 246; // ° is not at right position in glcdfont.c
+	ds18x20_get_temperature(&curtemp);
+	ds1307_sqw(DS1307_SQW_1HZ);
 
 	while (1) {
-		ds1307_gettime();
+		rtctime = ds1307_gettime();
 
 		if (lastdcfday != rtctime.day) {
 			dcf77_sync();
@@ -139,28 +124,29 @@ int main(void){
 
 		if (lastmin != rtctime.minute && synchronize) {
 			// check temperature only once per minute and only if dcf77 is synchronized
-			DS18X20_start_meas(DS18X20_POWER_EXTERN, NULL);
-			while(DS18X20_conversion_in_progress());
-			DS18X20_read_decicelsius_single(DS18B20_FAMILY_CODE,&curtemp);
+			ds18x20_get_temperature(&curtemp);
 		}
 
 		if (lastmin != rtctime.minute) {
+			fillScreen(ST7735_BLACK);
 			setTextSize(5);
 			setCursor(5,30);
-			fillScreen(ST7735_BLACK);
 			setRotation(1);
-			print(get_time_str((char *) timestr));
+			get_time_str(rtctime);
+			print(timestr);
 			lastmin = rtctime.minute;
 
 			setTextSize(1);
 			setCursor(10,110);
 			setRotation(1);
-			print(get_date_str((char *) datestr));
+			get_date_str(rtctime);
+			print(datestr);
 
 			setTextSize(1);
 			setCursor(110,110);
 			setRotation(1);
-			print(get_temp_str((char *) tempstr));
+			get_temp_str(curtemp);
+			print(tempstr);
 		}
 
 		if (synchronize) {
