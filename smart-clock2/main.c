@@ -39,34 +39,6 @@ void get_date_str(struct time rtctime) {
 	datestr[9] = (rtctime.year % 10) + '0';
 }
 
-void ds1307_gettime(void) {
-	uint8_t tmp = ds1307_read(0);
-	rtctime.second = (tmp & 0x0F) + ((tmp & 0b01110000) >> 4) * 10;
-	tmp = ds1307_read(1);
-	rtctime.minute = (tmp & 0x0F) + ((tmp & 0b01110000) >> 4) * 10;
-	tmp = ds1307_read(2);
-	rtctime.hour = (tmp & 0x0F) + ((tmp & 0b00110000) >> 4) * 10;
-	rtctime.wday = ds1307_read(3);
-	tmp = ds1307_read(4);
-	rtctime.day = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
-	tmp = ds1307_read(5);
-	rtctime.month = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
-	tmp = ds1307_read(6);
-	rtctime.year = (tmp & 0x0F) + ((tmp & 0xF0) >> 4) * 10;
-
-	rtctime.second &= ~128;
-}
-
-void ds1307_settime(struct time t) {
-	ds1307_write(0, ((t.second / 10) << 4) | (t.second % 10));
-	ds1307_write(1, ((t.minute / 10) << 4) | (t.minute % 10));
-	ds1307_write(2, ((t.hour / 10) << 4) | (t.hour % 10));
-	ds1307_write(3, t.wday);
-	ds1307_write(4, ((t.day / 10) << 4) | (t.day % 10));
-	ds1307_write(5, ((t.month / 10) << 4) | (t.month % 10));
-	ds1307_write(6, ((t.year / 10) << 4) | (t.year % 10));
-}
-
 void dcf77_sync(void) {
 	scan_dcf77(); // has to be called at least once every 100ms
 	#if 1
