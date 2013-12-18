@@ -114,9 +114,9 @@ volatile uint8_t state = 0;
 uint8_t debounecounter = 0;
 
 uint8_t getRandom(uint8_t max) {
-// 	return rand() / (RAND_MAX / max + 1);
+	return rand() / (RAND_MAX / max + 1);
 
-	return 5;
+// 	return 5;
 }
 
 void startSound(void) {
@@ -144,7 +144,7 @@ int main(void) {
 	TIMSK |= (1<<OCIE0A);
 	sei();
 	
-	int8_t r = getRandom(250);
+	int8_t r = getRandom(30);
 	while(1) {
 		if (time/1000 > r) {
 			startSound();
