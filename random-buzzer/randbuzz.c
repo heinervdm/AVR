@@ -108,24 +108,33 @@ uint8_t get_key_long( uint8_t key_mask )
 #define STATUS_PIN  PIND
 #define STATUS_OUT  PD6
 
+// SOUNDTIMEMAX in 0.01 seconds
+#define SOUNDTIMEMAX 1000
+// MAXRANDTIME 0 - 255 seconds
+#define MAXRANDTIME 250
+
 volatile uint32_t time = 0;
 volatile uint16_t reactiontime = 0;
 volatile uint8_t state = 0;
-uint8_t debounecounter = 0;
+volatile uint16_t soundtime = 0;
+volatile uint8_t playsound = 0;
 
 uint8_t getRandom(uint8_t max) {
 	return rand() / (RAND_MAX / max + 1);
-
-// 	return 5;
 }
 
 void startSound(void) {
-	SOUND_PORT |= (1<<SOUND_OUT);
-	
-	STATUS_PORT |= 1<<STATUS_OUT;
+	playsound = 1;
+	soundtime = 0;
+	TIMSK |= (1<<OCIE1A);
+	TCCR1B |= (1<<WGM12) | (1<<CS10) | (1<<CS12); // CTC, prescaler 1024
+	OCR1A = F_CPU/1024/2000;
+	STATUS_PORT |= (1<<STATUS_OUT);
 }
 
 void stopSound(void) {
+	playsound = 0;
+	TIMSK &= ~(1<<OCIE1A);
 	SOUND_PORT &= ~(1<<SOUND_OUT);
 	STATUS_PORT &= ~(1<<STATUS_OUT);
 }
@@ -137,68 +146,58 @@ int main(void) {
 
 	SOUND_DDR |= (1<<SOUND_OUT);
 	STATUS_DDR |= (1<<STATUS_OUT);
+	STATUS_PORT &= ~(1<<STATUS_OUT);
 
 	TCCR0A = (1<<WGM01); // CTC Modus
 	TCCR0B |= (1<<CS00) | (1<<CS02); // Prescaler 1204
-	OCR0A = F_CPU/1024/1000 + 1;
+	OCR0A = F_CPU/1024/100 + 1; // 100Hz
 	TIMSK |= (1<<OCIE0A);
 	sei();
-	
-	int8_t r = getRandom(30);
+
+	int8_t r = getRandom(MAXRANDTIME);
 	while(1) {
-		if (time/1000 > r) {
+		if (time/100 > r) {
 			startSound();
 		}
 		if( get_key_press( 1<<KEY2 ) || get_key_rpt( 1<<KEY2 )){
 			stopSound();
-			r = getRandom(250);
+			r = getRandom(MAXRANDTIME);
 			time = 0;
 		}
 	}
 }
 
-ISR (TIMER0_COMPA_vect) {
-	++time;
-	++debounecounter;
-
-	if (debounecounter >= 10) {
-		debounecounter = 0;
-		static uint8_t ct0, ct1, rpt;
-		uint8_t i;
-
-		i = key_state ^ ~KEY_PIN;                       // key changed ?
-		ct0 = ~( ct0 & i );                             // reset or count ct0
-		ct1 = ct0 ^ (ct1 & i);                          // reset or count ct1
-		i &= ct0 & ct1;                                 // count until roll over ?
-		key_state ^= i;                                 // then toggle debounced state
-		key_press |= key_state & i;                     // 0->1: key press detect
-		
-		if( (key_state & REPEAT_MASK) == 0 )            // check repeat function
-			rpt = REPEAT_START;                         // start delay
-		if( --rpt == 0 ){
-			rpt = REPEAT_NEXT;                          // repeat delay
-			key_rpt |= key_state & REPEAT_MASK;
-		}
+ISR (TIMER1_COMPA_vect) {
+	if (soundtime < SOUNDTIMEMAX) {
+		SOUND_PORT ^= (1<<SOUND_OUT);
+		OCR1A = ((SOUNDTIMEMAX * 10) - (soundtime * 9))*F_CPU/1024/2000/SOUNDTIMEMAX;
+	}
+	else if (soundtime >= SOUNDTIMEMAX * 3 / 2) {
+		startSound();
+	} else {
+		SOUND_PORT &= ~(1<<SOUND_OUT);
 	}
 }
 
+ISR (TIMER0_COMPA_vect) {
+	++time;
 
+	if (playsound == 1) ++soundtime;
 
-// 	while(1){
-// 		if( get_key_short( 1<<KEY1 ))
-// 			LED_PORT ^= 1<<LED1;
-// 		
-// 		if( get_key_long( 1<<KEY1 ))
-// 			LED_PORT ^= 1<<LED2;
-// 		
-// 		// single press and repeat
-// 		
-// 		if( get_key_press( 1<<KEY2 ) || get_key_rpt( 1<<KEY2 )){
-// 			uint8_t i = LED_PORT;
-// 			
-// 			i = (i & 0x07) | ((i << 1) & 0xF0);
-// 			if( i < 0xF0 )
-// 				i |= 0x08;
-// 			LED_PORT = i;      
-// 		}
-// 	}
+	static uint8_t ct0, ct1, rpt;
+	uint8_t i;
+
+	i = key_state ^ ~KEY_PIN;                       // key changed ?
+	ct0 = ~( ct0 & i );                             // reset or count ct0
+	ct1 = ct0 ^ (ct1 & i);                          // reset or count ct1
+	i &= ct0 & ct1;                                 // count until roll over ?
+	key_state ^= i;                                 // then toggle debounced state
+	key_press |= key_state & i;                     // 0->1: key press detect
+	
+	if( (key_state & REPEAT_MASK) == 0 )            // check repeat function
+		rpt = REPEAT_START;                         // start delay
+	if( --rpt == 0 ){
+		rpt = REPEAT_NEXT;                          // repeat delay
+		key_rpt |= key_state & REPEAT_MASK;
+	}
+}
