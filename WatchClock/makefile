@@ -38,8 +38,8 @@
 
 # MCU name
 #MCU = atmega32a
-MCU = attiny2313
-# MCU = atmega8
+# MCU = attiny2313
+MCU = atmega8
 
 # Processor frequency.
 #     This will define a symbol, F_CPU, in all source code files equal to the 
@@ -47,8 +47,8 @@ MCU = attiny2313
 #     calculate timings. Do NOT tack on a 'UL' at the end, this will be done
 #     automatically to create a 32-bit value in your source code.
 # F_CPU = 1000000
-F_CPU = 14700000
-
+# F_CPU = 14700000
+F_CPU = 5068800
 # Output format. (can be srec, ihex, binary)
 FORMAT = ihex
 
