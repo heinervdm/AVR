@@ -8328,9 +8328,7 @@ Source: http://www.infineon.com/upload/Document/BSP170P_Rev2.4.pdf</description>
 <part name="CL5" library="con-harting-ml" deviceset="ML10" device=""/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
 <part name="P+1" library="supply1" deviceset="+5V" device=""/>
-<part name="GND2" library="supply1" deviceset="GND" device=""/>
 <part name="P+2" library="supply1" deviceset="+5V" device=""/>
-<part name="GND3" library="supply1" deviceset="GND" device=""/>
 <part name="C4" library="resistor" deviceset="C-EU" device="C0805" value="100n"/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
 <part name="P+3" library="supply1" deviceset="+5V" device=""/>
@@ -8401,9 +8399,7 @@ Source: http://www.infineon.com/upload/Document/BSP170P_Rev2.4.pdf</description>
 <instance part="CL5" gate="G$1" x="210.82" y="30.48" rot="R180"/>
 <instance part="GND1" gate="1" x="45.72" y="40.64"/>
 <instance part="P+1" gate="1" x="45.72" y="60.96"/>
-<instance part="GND2" gate="1" x="17.78" y="76.2" rot="R270"/>
 <instance part="P+2" gate="1" x="33.02" y="86.36" rot="R90"/>
-<instance part="GND3" gate="1" x="27.94" y="63.5" rot="R270"/>
 <instance part="C4" gate="G$1" x="35.56" y="66.04" rot="R180"/>
 <instance part="GND4" gate="1" x="129.54" y="53.34"/>
 <instance part="P+3" gate="1" x="129.54" y="68.58"/>
@@ -8487,26 +8483,22 @@ Source: http://www.infineon.com/upload/Document/BSP170P_Rev2.4.pdf</description>
 <segment>
 <pinref part="C1" gate="G$1" pin="1"/>
 <pinref part="C2" gate="G$1" pin="1"/>
-<wire x1="20.32" y1="78.74" x2="20.32" y2="76.2" width="0.1524" layer="91"/>
-<pinref part="GND2" gate="1" pin="GND"/>
-<junction x="20.32" y="76.2"/>
-<wire x1="20.32" y1="76.2" x2="20.32" y2="73.66" width="0.1524" layer="91"/>
-</segment>
-<segment>
+<wire x1="20.32" y1="78.74" x2="20.32" y2="73.66" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="GND@1"/>
-<pinref part="GND3" gate="1" pin="GND"/>
-<wire x1="30.48" y1="63.5" x2="35.56" y2="63.5" width="0.1524" layer="91"/>
+<wire x1="20.32" y1="63.5" x2="35.56" y2="63.5" width="0.1524" layer="91"/>
 <pinref part="C4" gate="G$1" pin="1"/>
 <wire x1="35.56" y1="63.5" x2="45.72" y2="63.5" width="0.1524" layer="91"/>
 <junction x="35.56" y="63.5"/>
+<wire x1="20.32" y1="73.66" x2="20.32" y2="63.5" width="0.1524" layer="91"/>
+<pinref part="C5" gate="G$1" pin="1"/>
+<pinref part="GND5" gate="1" pin="GND"/>
+<wire x1="20.32" y1="63.5" x2="20.32" y2="58.42" width="0.1524" layer="91"/>
+<junction x="20.32" y="73.66"/>
+<junction x="20.32" y="63.5"/>
 </segment>
 <segment>
 <pinref part="SV1" gate="1" pin="6"/>
 <pinref part="GND4" gate="1" pin="GND"/>
-</segment>
-<segment>
-<pinref part="C5" gate="G$1" pin="1"/>
-<pinref part="GND5" gate="1" pin="GND"/>
 </segment>
 <segment>
 <pinref part="R2" gate="G$1" pin="2"/>
