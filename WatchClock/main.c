@@ -2,6 +2,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include <avr/power.h>
 
 #include "uart.h"
 
@@ -9,9 +10,7 @@
 	#define F_CPU 3686400
 #endif
 
-
 #define UART_BAUD_RATE 9600L
-// #define UBRR_VAL ((F_CPU+UART_BAUD_RATE*8)/(UART_BAUD_RATE*16)-1)
 
 /*
  * Clock mapping
@@ -58,27 +57,35 @@
 // first seconds pointer then minutes pointer of one clock
 volatile uint8_t *ports[N_POINTERS*2]      = {&PORTD,&PORTD,&PORTD,&PORTD};
 volatile uint8_t *ddrs[N_POINTERS*2]       = {&DDRD, &DDRD, &DDRD, &DDRD};
-const uint8_t pins[N_POINTERS*2]        = {PD6,   PD7,   PD2,   PD3};
+const uint8_t pins[N_POINTERS*2]           = {PD6,   PD7,   PD2,   PD3};
 // FIXME: extend this to 6
 // 2 pointers share one ADC
 const uint8_t adcs[N_POINTERS/2]        = {0};
 // FIXME: extend these to 12
 const uint8_t stepsPerSec[N_POINTERS]   = { 1, 4};
-uint8_t position[N_POINTERS]      = { 0, 0};
+uint8_t position[N_POINTERS]            = { 0, 0};
 const uint8_t zeroSteps[N_POINTERS]     = { 5,14};
 const uint8_t stepsAfterZero[N_POINTERS]= { 5, 7};
+
+const uint8_t times[10][6][2] = {
+	{{30,15*4},{45,30*4},{ 0,30*4},{ 0,30*4},{ 0,15*5},{ 0,45*4}}, // 0
+	{{37,37*4},{30,30*4},{37,37*4},{ 0,30*4},{37,37*4},{ 0, 0*4}}, // 1
+	{{15,15*4},{45,30*4},{15,30*4},{45, 0*4},{ 0,15*4},{45,45*4}}, // 2
+	{{15,15*4},{45,30*4},{15,15*4},{45,30*4},{15,15*4},{45, 0*4}}, // 3
+	{{30,30*4},{30,30*4},{ 0,15*4},{ 0,45*4},{37,37*4},{ 0, 0*4}}, // 4
+	{{15,30*4},{45,45*4},{ 0,15*4},{45,30*4},{15,15*4},{45, 0*4}}, // 5
+	{{15,30*4},{45,45*4},{30,15*4},{45,30*4},{ 0,15*4},{ 0,45*4}}, // 6
+	{{15,15*4},{15,30*4},{37,37*4},{ 0,37*4},{ 7,37*4},{37,37*4}}, // 7
+	{{30,15*4},{30,45*4},{30,15*4},{30,45*4},{ 0,15*4},{ 0,45*4}}, // 8
+	{{30,15*4},{30,45*4},{ 0,15*4},{ 0,45*4},{15,15*4},{ 0,45*4}}, // 9
+};
+
+const uint8_t digit = 0;
 
 volatile uint8_t duration = 0;
 uint16_t lastpulse = 0; // bit = 0 -> lastpulse pin 0, bit = 1 -> lastpulse pin 1
 
-uint8_t seconds = 0;
-uint8_t minutes = 0;
-uint8_t hours = 0;
-uint8_t newtime = 0;
-uint8_t running = 0;
-
-volatile uint8_t uart_flag;
-volatile uint8_t uart_data;
+uint8_t uart_data;
 
 void pulse(uint16_t pointers) {
 	for (uint8_t i = 0; i < N_POINTERS; i++) {
@@ -93,32 +100,27 @@ void pulse(uint16_t pointers) {
 			*ports[index] |= (1<<pins[index]);
 			*ddrs[index]  |= (1<<pins[index]);
 			*ddrs[oindex] |= (1<<pins[oindex]);
-// 			PORTD |= (1<<pins[index]);
-// 			DDRD  |= (1<<pins[index]);
-// 			DDRD  |= (1<<pins[oindex]);
 			lastpulse ^= (1<<i);
 			position[i]++;
-			if (position[i] >= 60) position[i] = 0;
+			if (position[i] >= 60*stepsPerSec[i]) position[i] = 0;
 		}
 	}
 	duration = 1;
-// 	_delay_ms(100);
 	TIMSK |= (1<<OCIE2);       // TC0 compare match A interrupt enable
 }
 
 void init(void) {
+// 	power_adc_enable();
 	PORTB &= ~(1<<PB0);
 	DDRB |= (1<<PB0);
 	uint16_t p = 0;
 	uint8_t zerostepcount[N_POINTERS];
 	uint8_t stepsToGo[N_POINTERS];
-	uint8_t stepcount[N_POINTERS];
 	uint8_t backupstepsgone[N_POINTERS/2];
 	uint16_t zeroFound = 0;
 	for (uint8_t i = 0; i < N_POINTERS; i++) {
 		zerostepcount[i] = 0;
 		stepsToGo[i] = stepsAfterZero[i];
-		stepcount[i]=0;
 		if (i<N_POINTERS/2) {
 			backupstepsgone[i] = 0;
 		}
@@ -130,7 +132,6 @@ void init(void) {
 		for (uint8_t i = minutesHomed; i < N_POINTERS; i+=2) {
 			if (minutesHomed == 1 && zerostepcount[i] > 20) {
 				// move minutes pointer away
-				uart_puts("Doing backup steps.\n");
 				if (backupstepsgone[i/2] < BACKUPSTEPS) {
 					backupstepsgone[i/2]++;
 					p |= (1<<(i-1));
@@ -145,46 +146,31 @@ void init(void) {
 				while (ADCSRA & (1<<ADSC));
 				uint16_t ares = ADCL;
 				ares += (ADCH<<8);
-// 				ADCSRA = (1<<ADEN) | (1<<ADSC);
-// 				while (ADCSRA & (1<<ADSC));
-// 				ares += ADCL;
-// 				ares += (ADCH<<8);
-// 				ares /= 2;
 				// 0.1V*1024/2.56V = 40
 				uart_puts("ADC: ");
-				uart_putc('0'+ares/100);
-				uart_putc('0'+(ares%100)/10);
-				uart_putc('0'+ares%10);
+				uart_putc(ares/1000+'0');
+				uart_putc(ares%1000/100+'0');
+				uart_putc(ares%100/10+'0');
+				uart_putc(ares%10+'0');
 				uart_putc('\n');
 				if (ares < 150) {
+					// LED off
 					zerostepcount[i]++;
 					PORTB |= (1<<PB0);
-					uart_puts("LED off\n");
-					uart_puts("zero step count: ");
-					uart_putc('0'+zerostepcount[i]/10);
-					uart_putc('0'+zerostepcount[i]%10);
-					uart_putc('\n');
 				}
 				else {
+					// LED on
 					PORTB &= ~(1<<PB0);
-					if (zerostepcount[i]>0) {
-					uart_puts("LED on\n");
-					uart_puts("zero step count: ");
-					uart_putc('0'+zerostepcount[i]/10);
-					uart_putc('0'+zerostepcount[i]%10);
-					uart_putc('\n');
-					}
 					if (zerostepcount[i] == zeroSteps[i]) {
+						// LED was off for the searched time -> we found the zero position
 						zeroFound |= (1<<i);
-						uart_puts("Zero found!\n");
 					}
 					zerostepcount[i] = 0;
-					// check for 0 position
 				}
 				if (stepsToGo[i] > 0) {
 					p |= (1<<i);
+					// zero was found, go the remaining steps to zero position
 					if (zeroFound & (1<<i)) stepsToGo[i]--;
-					stepcount[i]++;
 				}
 				ADCSRA = 0;
 			}
@@ -199,21 +185,15 @@ void init(void) {
 			else minutesHomed = 0;
 		}
 	}
-}
-
-void pulse2(void) {
-	PORTD |= (1<<PD0);
-	DDRD |= (1<<PD0) | (1<<PD1);
-	_delay_ms(100);
-	PORTD &= ~(1<<PD0);
-	PORTD |= (1<<PD1);
-	_delay_ms(100);
-	PORTD &= ~(1<<PD1);
-	DDRD &= ~(1<<PD0);
-	DDRD &= ~(1<<PD1);
+// 	power_adc_disable();
 }
 
 int main(void) {
+	uint8_t timeReached = 1;
+// 	power_all_disable();
+// 	power_timer2_enable();
+// 	power_usart0_enable();
+// 	wdt_disable();
 	DDRD = 0; // All inputs
 	PORTD = 0; // All PullUps off
 
@@ -222,61 +202,63 @@ int main(void) {
 	TCCR2 = (1<<WGM21);          // Clear Timer on Compare Match (CTC) mode
 	TCCR2 = (1<<CS20)|(1<<CS21)|(1<<CS22); // clock source CLK/1024
 
-	uart_init( UART_BAUD_SELECT(UART_BAUD_RATE,F_CPU) );
-
-// 	UBRRH = UBRR_VAL >> 8;
-// 	UBRRL = UBRR_VAL & 0xFF;
-// 	UCSRB = (1<<RXCIE) | (1<<RXEN);
-
-	// interrupt every second, for clock
-// 	TCCR1B = (1<<WGM12) | (1<<CS12) | (1<<CS10);
-// 	OCR1A   = F_CPU/1024;
-// 	TIMSK |= ~(1<<OCIE1A);
+	uart_init( UART_BAUD_SELECT(UART_BAUD_RATE,F_CPU) ); 
 
 	sei();
-	uart_puts("String stored in SRAM\n");
 	init();
-
+	for (uint8_t i = 0; i < N_POINTERS; i++) {
+		position[i] = 0;
+	}
+	uart_puts("Start main loop.\n");
 	while(1) {
-// 		if (newtime) {
-// 			running = 1;
-// 			// set position to reach.
-// 		}
-// 		if (running) {
-// 			uint16_t p;
-// 			for (uint8_t i = 0; i < 60; i++) {
-// 				p = (1<<CLOCK_0_SEC);
-// 			}
-// 			pulse(p);
-// 			while(duration > 0); // wait for pulse to finish, can go to sleep mode in this time
-// 		}
-// 		set_sleep_mode(SLEEP_MODE_IDLE);
-// 		sleep_mode();
+		if (timeReached == 1) {
+			set_sleep_mode(SLEEP_MODE_IDLE);
+// 			power_timer2_disable();
+// 			sleep_enable();
+// 			sleep_bod_disable();
+// 			sleep_cpu();
+// 			sleep_disable();
+			_delay_ms(100);
+// 			power_timer2_enable();
+		} else {
+			uint16_t p = 0;
+			uart_puts("Current Position: ");
+			for (uint8_t i = 0; i < N_POINTERS; i++) {
+				if (i > 0) uart_putc(',');
+				uart_putc(i+'0');
+				uart_puts(": ");
+				uart_putc(position[i]/100+'0');
+				uart_putc(position[i]%100/10+'0');
+				uart_putc(position[i]%10+'0');
+				uart_puts(" (");
+				uart_putc(times[uart_data-'0'][i/2][i%2]/100+'0');
+				uart_putc(times[uart_data-'0'][i/2][i%2]%100/10+'0');
+				uart_putc(times[uart_data-'0'][i/2][i%2]%10+'0');
+				uart_puts(")\n");
+				if (position[i] != times[uart_data-'0'][i/2][i%2]) {
+					p |= (1<<i);
+				}
+			}
+			if (p > 0) {
+				uart_puts("pulse\n");
+				pulse(p);
+				while(duration > 0); // wait for pulse to finish, can go to sleep mode in this time
+			} else {
+				uart_puts("time reached\n");
+				timeReached = 1;
+			}
+		}
 		_delay_ms(100);
-// 		DDRD = 0;
-// 		PORTD = 0;
-// 		if (uart_flag == 1) {
-// 			uart_flag = 0;
-// 			// new time;
-// 		}
-		ADMUX = (1<<REFS0) | (1<<REFS1) | (adcs[0] & 0x0F);
-		ADCSRA = (1<<ADEN) | (1<<ADSC);
-		while (ADCSRA & (1<<ADSC));
-		uint16_t ares = ADCL;
-		ares += (ADCH<<8);
-		// 				ADCSRA = (1<<ADEN) | (1<<ADSC);
-		// 				while (ADCSRA & (1<<ADSC));
-		// 				ares += ADCL;
-		// 				ares += (ADCH<<8);
-		// 				ares /= 2;
-		// 0.1V*1024/2.56V = 40
-		uart_puts("ADC: ");
-		uart_putc('0'+ares/100);
-		uart_putc('0'+(ares%100)/10);
-		uart_putc('0'+ares%10);
-		uart_putc('\n');
-		if (ares < 100) {
-			PORTB |= (1<<PB0);
+
+		uint16_t c = uart_getc();
+		if (! (c & UART_NO_DATA) ) {
+			if (c >= '0' && c <= '9') {
+				uart_data = c & 0xFF;
+				timeReached = 0;
+				uart_puts("New position: ");
+				uart_putc(uart_data);
+				uart_putc('\n');
+			}
 		}
 	}
 }
@@ -293,26 +275,3 @@ ISR(TIMER2_COMP_vect ) {
 	}
 	sei();
 }
-
-ISR(TIMER1_COMPA_vect ) {
-	cli();
-	seconds++;
-	if (seconds >= 60) {
-		seconds = 0;
-		minutes++;
-		if (minutes >= 60) {
-			minutes = 0;
-			hours++;
-			if (hours >= 24) {
-				hours = 0;
-			}
-		}
-		newtime = 1;
-	}
-	sei();
-}
-
-// ISR(USART_RXC_vect) {
-// 	uart_flag = 1;
-// 	uart_data = UDR;
-// }
