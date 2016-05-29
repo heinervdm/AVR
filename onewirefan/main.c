@@ -18,9 +18,9 @@ int main(void) {
 	for (;;) {
 		d = ds18b20_gettemp();
 
-		if (d < 25) OCR0B = 0;
-		else if (d > 50) OCR0B = 0xFF;
-		else OCR0B = (d - 25) * 2 + 128;
+		if (d < 35) OCR0B = 0;
+		else if (d > 60) OCR0B = 0xFF;
+		else OCR0B = (d - 35) * 2 + 128;
 
 		_delay_ms(500);
 	}
