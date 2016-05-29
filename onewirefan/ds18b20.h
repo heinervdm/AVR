@@ -22,7 +22,7 @@ References:
 #define DS18B20_PORT PORTB
 #define DS18B20_DDR DDRB
 #define DS18B20_PIN PINB
-#define DS18B20_DQ PB1
+#define DS18B20_DQ PB0
 
 //commands
 #define DS18B20_CMD_CONVERTTEMP 0x44

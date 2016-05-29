@@ -37,7 +37,7 @@
 
 
 # MCU name
-MCU = attiny45
+MCU = attiny85
 # MCU = atmega8
 
 # Processor frequency.
@@ -198,7 +198,7 @@ LDFLAGS += $(PRINTF_LIB) $(SCANF_LIB) $(MATH_LIB)
 # Type: avrdude -c ?
 # to get a full listing.
 #
-AVRDUDE_PROGRAMMER = usbtiny
+AVRDUDE_PROGRAMMER = jtag3isp
 
 # com1 = serial port. Use lpt1 to connect to parallel port.
 AVRDUDE_PORT = usb    # programmer connected to serial device

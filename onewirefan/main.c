@@ -7,10 +7,10 @@
 int main(void) {
 	double d = 0;
 
-	DDRB |= (1<<PB0); // Port OC0A mit angeschlossener LED als Ausgang
-	TCCR0A = (1<<WGM00) | (1<<WGM01) | (1<<COM0A0); // Fast PWM, toggle OC0A.
-	TCCR0B = (1<<WGM02) | (1<<CS11) | (1<<CS10); // Prescaler 64 = Enable counter
-	OCR0A = 128-1; // Duty cycle 50% (Anm. ob 128 oder 127 bitte prüfen)
+	DDRB |= (1<<PB1); // Port OC0A mit angeschlossener LED als Ausgang
+	TCCR0A = (1<<WGM00) | (1<<WGM01) | (1<<COM0B1); // Fast PWM, toggle OC0A.
+	TCCR0B = (1<<CS00); // Prescaler 64 = Enable counter
+	OCR0B = 128; // Duty cycle 50% (Anm. ob 128 oder 127 bitte prüfen)
 
 	//init interrupt
 	sei();
@@ -18,9 +18,9 @@ int main(void) {
 	for (;;) {
 		d = ds18b20_gettemp();
 
-		if (d < 25) OCR0A = 0;
-		else if (d > 50) OCR0A = 0xFF;
-		else OCR0A = (d - 25) * 4;
+		if (d < 25) OCR0B = 0;
+		else if (d > 50) OCR0B = 0xFF;
+		else OCR0B = (d - 25) * 4;
 
 		_delay_ms(500);
 	}
