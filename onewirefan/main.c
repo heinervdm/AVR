@@ -20,7 +20,7 @@ int main(void) {
 
 		if (d < 25) OCR0B = 0;
 		else if (d > 50) OCR0B = 0xFF;
-		else OCR0B = (d - 25) * 4;
+		else OCR0B = (d - 25) * 2 + 128;
 
 		_delay_ms(500);
 	}
