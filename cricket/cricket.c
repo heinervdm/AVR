@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -20,6 +21,8 @@ int main(void) {
 	TIMSK |= (1<<TOIE1); // enable output compare interrupt
 	OCR1C = 100; // 10 kHz interrupt
 
+	srand(10);
+
 	while(1) {
 // 		for (uint8_t s=1;s<4;s=++) {
 // 			for (uint8_t t=1;t<5;t=++) {
@@ -36,7 +39,10 @@ int main(void) {
 // 		_delay_ms(600);
 
 		if (state == sleep1) {
-			rndsleep = 10;
+			rndsleep = 10; // rand() & 0xFF;
+			if (rndsleep < 10) {
+				rndsleep = 10;
+			}
 			count1 = 0;
 			count2 = 0;
 			state = sleep2;
