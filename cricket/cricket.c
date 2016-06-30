@@ -3,10 +3,10 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-enum {chirp, wait1, wait2, sleep1, sleep2};
+// enum {chirp, wait1, wait2, sleep1, sleep2};
 
 volatile uint8_t clapped = 0;
-volatile uint8_t state = chirp;
+// volatile uint8_t state = chirp;
 volatile uint8_t count1 = 0;
 volatile uint16_t count2 = 0, rndsleep = 0;
 
@@ -24,69 +24,82 @@ int main(void) {
 	srand(10);
 
 	while(1) {
-// 		for (uint8_t s=1;s<4;s=++) {
-// 			for (uint8_t t=1;t<5;t=++) {
-// 				for (uint8_t i=1;i<25;i=++) {
-// 					PORTB |= (1<<PB3);
-// 					_delay_us(200);
-// 					PORTB &= ~(1<<PB3);
-// 					_delay_us(200);
-// 				}
-// 				_delay_us(300);
-// 			}
-// 			_delay_ms(500);
-// 		}
-// 		_delay_ms(600);
-
-		if (state == sleep1) {
-			rndsleep = 10; // rand() & 0xFF;
-			if (rndsleep < 10) {
-				rndsleep = 10;
+		for (uint8_t s=1;s<4;s++) {
+			for (uint8_t t=1;t<5;t++) {
+				for (uint8_t i=1;i<25;i++) {
+					if (clapped == 0) {
+						PORTB |= (1<<PB3);
+					}
+					_delay_us(200);
+					if (clapped == 0) {
+						PORTB &= ~(1<<PB3);
+					}
+					_delay_us(200);
+				}
+				_delay_us(300);
 			}
-			count1 = 0;
-			count2 = 0;
-			state = sleep2;
+			if (clapped == 1) {
+				clapped = 2;
+				rndsleep = 10; // rand() & 0xFF;
+				if (rndsleep < 10) {
+					rndsleep = 10;
+				}
+				count1 = 0;
+				count2 = 0;
+			}
+			_delay_ms(500);
 		}
+		_delay_ms(600);
+
+// 		if (state == sleep1) {
+// 			rndsleep = 10; // rand() & 0xFF;
+// 			if (rndsleep < 10) {
+// 				rndsleep = 10;
+// 			}
+// 			count1 = 0;
+// 			count2 = 0;
+// 			state = sleep2;
+// 		}
 	}
 }
 
 ISR(PCINT0_vect) { // called after clap
 	clapped = 1;
-	state = sleep1;
+// 	state = sleep1;
 }
 
 ISR(TIM1_OVF_vect) { // called every 100us
-	if (state == chirp) {
-		count1++;
-		if (count1 %2) {
-			PORTB ^= (1<<PB3);
-		}
-		if (count1 > 100) {
-			count1 = 0;
-			state = wait1;
-		}
-	} else if (state == wait1) {
-		count1++;
-		if (count1 > 3) {
-			count1 = 0;
-			count2++;
-			state = chirp;
-		}
-		if (count2 > 5) {
-			count2 = 0;
-			state = wait2;
-		}
-	} else if (state == wait2) {
-		count1++;
-		if (count1 > 100) {
-			count1 = 0;
-			count2++;
-			if (count2 > 1000) {
-				count2 = 0;
-				state = chirp;
-			}
-		}
-	} else if (state == sleep2) {
+// 	if (state == chirp) {
+// 		count1++;
+// 		if (count1 %2) {
+// 			PORTB ^= (1<<PB3);
+// 		}
+// 		if (count1 > 100) {
+// 			count1 = 0;
+// 			state = wait1;
+// 		}
+// 	} else if (state == wait1) {
+// 		count1++;
+// 		if (count1 > 3) {
+// 			count1 = 0;
+// 			count2++;
+// 			state = chirp;
+// 		}
+// 		if (count2 > 5) {
+// 			count2 = 0;
+// 			state = wait2;
+// 		}
+// 	} else if (state == wait2) {
+// 		count1++;
+// 		if (count1 > 100) {
+// 			count1 = 0;
+// 			count2++;
+// 			if (count2 > 1000) {
+// 				count2 = 0;
+// 				state = chirp;
+// 			}
+// 		}
+// 	} else if (state == sleep2) {
 		count1++;
 		if (count1 > 100) {
 			count1 = 0;
@@ -95,9 +108,10 @@ ISR(TIM1_OVF_vect) { // called every 100us
 				count2 = 0;
 				rndsleep--;
 				if (rndsleep < 1) {
-					state = chirp;
+// 					state = chirp;
+					clapped = 0;
 				}
 			}
 		}
-	}
+// 	}
 }
